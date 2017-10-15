@@ -3,38 +3,38 @@
 
 class SumAsyncWorker : public Napi::AsyncWorker
 {
-  public:
-    SumAsyncWorker(
-      const Napi::Function& callback,
-      const double arg0,
-      const double arg1
-    ) : Napi::AsyncWorker(callback), arg0(arg0), arg1(arg1), sum(0)
-    {
-    }
+public:
+  SumAsyncWorker(
+    const Napi::Function& callback,
+    const double arg0,
+    const double arg1
+  ) : Napi::AsyncWorker(callback), arg0(arg0), arg1(arg1), sum(0)
+  {
+  }
 
-  protected:
-    void Execute() override
-    {
-      sum = arg0 + arg1;
-    }
+protected:
+  void Execute() override
+  {
+    sum = arg0 + arg1;
+  }
 
-    void OnOK() override
-    {
-      Napi::Env env = Env();
+  void OnOK() override
+  {
+    Napi::Env env = Env();
 
-      Callback().MakeCallback(
-        Receiver().Value(),
-        {
-          env.Null(),
-          Napi::Number::New(env, sum)
-        }
-      );
-    }
+    Callback().MakeCallback(
+      Receiver().Value(),
+      {
+        env.Null(),
+        Napi::Number::New(env, sum)
+      }
+    );
+  }
 
-  private:
-    double arg0;
-    double arg1;
-    double sum;
+private:
+  double arg0;
+  double arg1;
+  double sum;
 };
 
 
