@@ -31,6 +31,19 @@ protected:
     );
   }
 
+  void OnError(const Napi::Error& e) override
+  {
+    Napi::Env env = Env();
+
+    Callback().MakeCallback(
+      Receiver().Value(),
+      {
+        e.Value(),
+        env.Undefined()
+      }
+    );
+  }
+
 private:
   double arg0;
   double arg1;
@@ -41,11 +54,15 @@ private:
 void AddCallback(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
+  // TODO: If `info[2]` is a Function, then consider tossing this error back via
+  // that callback rather than throwing it
   if (info.Length() != 3) {
     Napi::TypeError::New(env, "Invalid argument count").ThrowAsJavaScriptException();
     return;
   }
 
+  // TODO: If `info[2]` is a Function, then consider tossing this error back via
+  // that callback rather than throwing it
   if (!info[0].IsNumber() || !info[1].IsNumber() || !info[2].IsFunction()) {
     Napi::TypeError::New(env, "Invalid argument types").ThrowAsJavaScriptException();
     return;
