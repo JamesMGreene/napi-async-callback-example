@@ -51,7 +51,7 @@ private:
 };
 
 
-void AddCallback(const Napi::CallbackInfo& info) {
+void SumAsyncCallback(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   // TODO: If `info[2]` is a Function, then consider tossing this error back via
@@ -80,7 +80,7 @@ void AddCallback(const Napi::CallbackInfo& info) {
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set(
     Napi::String::New(env, "add"),
-    Napi::Function::New(env, AddCallback)
+    Napi::Function::New(env, SumAsyncCallback)
   );
   return exports;
 }
