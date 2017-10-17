@@ -23,34 +23,32 @@ describe('addon', function() {
       expect(addon.add).to.be.a('function');
     });
 
-    it('should expect 3 parameters', function() {
+    it('should synchronously throw when less than 3 parameters', function() {
       expect(() => { addon.add(); }).to.throw(TypeError, 'Invalid argument count');
       expect(() => { addon.add(1); }).to.throw(TypeError, 'Invalid argument count');
       expect(() => { addon.add(1, 2); }).to.throw(TypeError, 'Invalid argument count');
-      expect(() => { addon.add(1, 2, function() {}, 3); }).to.throw(TypeError, 'Invalid argument count');
     });
 
-    it('should expect valid parameters', function(done) {
-      var badFn = () => { done(new TypeError('callback should not have been invoked')); };
+    it('should asynchronously invoke the callback with an Error when more than 3 parameters', function(done) {
+      // Arrange
+      var step = 0;
 
-      // Invalid param 1
-      expect(() => { addon.add('a', 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(false, 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(true, 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add({}, 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add([], 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add([1], 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(() => { 1 }, 2, badFn); }).to.throw(TypeError, 'Invalid argument types');
+      // Act
+      addon.add(1, 2, function(err, sum) {
+        // Assert more
+        expect(err).to.be.an.instanceOf(TypeError);
+        expect(err.message).to.equal('Invalid argument count');
+        expect(sum).to.equal(undefined);
+        expect(step).to.equal(1);
+        done();
+      }, { another: 'argument' });
 
-      // Invalid param 2
-      expect(() => { addon.add(1, 'b', badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(1, false, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(1, true, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(1, {}, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(1, [], badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(1, [2], badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(1, () => { 2 }, badFn); }).to.throw(TypeError, 'Invalid argument types');
+      // Assert
+      expect(step).to.equal(0);
+      step++;
+    });
 
+    it('should synchronously throw when 3rd parameter is not a function', function(done) {
       // Invalid param 3
       expect(() => { addon.add(1, 2, 'c'); }).to.throw(TypeError, 'Invalid argument types');
       expect(() => { addon.add(1, 2, false); }).to.throw(TypeError, 'Invalid argument types');
@@ -59,15 +57,6 @@ describe('addon', function() {
       expect(() => { addon.add(1, 2, []); }).to.throw(TypeError, 'Invalid argument types');
       expect(() => { addon.add(1, 2, [3]); }).to.throw(TypeError, 'Invalid argument types');
       expect(() => { addon.add(1, 2, 3); }).to.throw(TypeError, 'Invalid argument types');
-
-      // Invalid params 1 + 2
-      expect(() => { addon.add('a', 'b', badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(false, false, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(true, true, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add({}, {}, badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add([], [], badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add([1], [2], badFn); }).to.throw(TypeError, 'Invalid argument types');
-      expect(() => { addon.add(() => { 1 }, () => { 2 }, badFn); }).to.throw(TypeError, 'Invalid argument types');
 
       // Invalid params 1 + 3
       expect(() => { addon.add('a', 2, 'c'); }).to.throw(TypeError, 'Invalid argument types');
@@ -99,8 +88,76 @@ describe('addon', function() {
       done();
     });
 
+    it('should asynchronously invoke the callback with an Error when other parameters are invalid', function(done) {
+      var timerId,
+          expectedCount = 0,
+          actualCount = 0,
+          step = 0,
+          errorCheckerFn = function() {
+            expectedCount++;
+
+            return function(err, sum) {
+              if (timerId) {
+                clearTimeout(timerId);
+                timerId = null;
+              }
+
+              actualCount++;
+
+              // Assert more
+              expect(err).to.be.an.instanceOf(TypeError);
+              expect(err.message).to.equal('Invalid argument types');
+              expect(sum).to.equal(undefined);
+              expect(actualCount).to.be.within(0, expectedCount);
+              expect(step).to.equal(1);
+
+              timerId = setTimeout(
+                function() {
+                  if (actualCount === expectedCount) {
+                    done();
+                  }
+                },
+                25
+              );
+            };
+          };
+
+      // Invalid param 1
+      addon.add('a', 2, errorCheckerFn());
+      addon.add(false, 2, errorCheckerFn());
+      addon.add(true, 2, errorCheckerFn());
+      addon.add({}, 2, errorCheckerFn());
+      addon.add([], 2, errorCheckerFn());
+      addon.add([1], 2, errorCheckerFn());
+      addon.add(() => { 1 }, 2, errorCheckerFn());
+
+      // Invalid param 2
+      addon.add(1, 'b', errorCheckerFn());
+      addon.add(1, false, errorCheckerFn());
+      addon.add(1, true, errorCheckerFn());
+      addon.add(1, {}, errorCheckerFn());
+      addon.add(1, [], errorCheckerFn());
+      addon.add(1, [2], errorCheckerFn());
+      addon.add(1, () => { 2 }, errorCheckerFn());
+
+      // Invalid params 1 + 2
+      addon.add('a', 'b', errorCheckerFn());
+      addon.add(false, false, errorCheckerFn());
+      addon.add(true, true, errorCheckerFn());
+      addon.add({}, {}, errorCheckerFn());
+      addon.add([], [], errorCheckerFn());
+      addon.add([1], [2], errorCheckerFn());
+      addon.add(() => { 1 }, () => { 2 }, errorCheckerFn());
+
+      // Assert
+      expect(step).to.equal(0);
+      step++;
+    });
+
     it('should return `undefined`', function(done) {
-      expect(addon.add(1, 2, function(err, sum) { done(err); })).to.equal(undefined);
+      expect(
+        addon.add(1, 2, function( err /*, sum */ ) { done(err); })
+      ).to.equal(undefined);
     });
 
     it('should execute callback', function(done) {
